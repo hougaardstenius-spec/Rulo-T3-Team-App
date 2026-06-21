@@ -164,7 +164,7 @@ export function PlayerCardDetail({ player, stats, awards, onBack }) {
           {awards && awards.length > 0
             ? awards.map((a, i) => {
                 const m = AWARD_META[a.award_type]
-                return m ? (
+                return m && !m.hideOnCard ? (
                   <span key={i} className={`award-badge ${m.cls}`}>
                     {m.emoji} {m.label} ×{a.count}
                   </span>
