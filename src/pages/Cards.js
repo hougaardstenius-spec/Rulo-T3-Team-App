@@ -6,15 +6,17 @@ export default function Cards() {
   const [players, setPlayers] = useState([])
   const [statsMap, setStatsMap] = useState({})
   const [awardsMap, setAwardsMap] = useState({})
+  const [partnerMap, setPartnerMap] = useState({})
   const [selected, setSelected] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
-      const [{ data: pl }, { data: st }, { data: aw }] = await Promise.all([
+      const [{ data: pl }, { data: st }, { data: rawAwards }, { data: ps }] = await Promise.all([
         supabase.from('players').select('*').order('name'),
         supabase.from('player_stats').select('*'),
-        supabase.rpc('award_counts'), // See note below — fallback below
+        supabase.from('awards').select('player_id, award_type'),
+        supabase.from('partner_stats').select('*, partner:partner_id(name, initials, color)'),
       ])
 
       setPlayers(pl || [])
@@ -23,23 +25,28 @@ export default function Cards() {
       ;(st || []).forEach(s => { sm[s.player_id] = s })
       setStatsMap(sm)
 
-      // Award counts: group by player + type
-      // If RPC not set up yet, fetch raw and group here
-      const { data: rawAwards } = await supabase
-        .from('awards')
-        .select('player_id, award_type')
-
       const am = {}
       ;(rawAwards || []).forEach(a => {
         if (!am[a.player_id]) am[a.player_id] = {}
         am[a.player_id][a.award_type] = (am[a.player_id][a.award_type] || 0) + 1
       })
-      // Convert to array format
       const amArr = {}
       Object.entries(am).forEach(([pid, types]) => {
         amArr[pid] = Object.entries(types).map(([award_type, count]) => ({ award_type, count }))
       })
       setAwardsMap(amArr)
+
+      // Gruppér partner stats per spiller
+      const pm = {}
+      ;(ps || []).forEach(p => {
+        if (!pm[p.player_id]) pm[p.player_id] = []
+        pm[p.player_id].push(p)
+      })
+      // Sorter efter point
+      Object.keys(pm).forEach(pid => {
+        pm[pid].sort((a, b) => b.points_together - a.points_together)
+      })
+      setPartnerMap(pm)
       setLoading(false)
     }
     load()
@@ -54,6 +61,7 @@ export default function Cards() {
         player={p}
         stats={statsMap[selected]}
         awards={awardsMap[selected] || []}
+        partnerStats={partnerMap[selected] || []}
         onBack={() => setSelected(null)}
       />
     )

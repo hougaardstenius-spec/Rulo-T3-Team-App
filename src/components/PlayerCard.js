@@ -201,3 +201,46 @@ export function PlayerCardDetail({ player, stats, awards, onBack }) {
     </>
   )
 }
+
+
+// Partner stats section — vises nederst på det udvidede kort
+export function PartnerStatsSection({ partnerStats }) {
+  if (!partnerStats || partnerStats.length === 0) return (
+    <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 14px', marginTop: 8 }}>
+      <div style={{ fontSize: 10, color: '#6fafc4', fontWeight: 700, letterSpacing: '.6px', textTransform: 'uppercase', marginBottom: 6 }}>
+        Makker-statistik
+      </div>
+      <div style={{ fontSize: 12, color: '#6fafc4' }}>Ingen kampe registreret endnu</div>
+    </div>
+  )
+
+  return (
+    <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 14px', marginTop: 8 }}>
+      <div style={{ fontSize: 10, color: '#6fafc4', fontWeight: 700, letterSpacing: '.6px', textTransform: 'uppercase', marginBottom: 10 }}>
+        Makker-statistik
+      </div>
+      {partnerStats.map((ps, i) => {
+        const winPct = ps.matches_played > 0 ? Math.round((ps.matches_won / ps.matches_played) * 100) : 0
+        return (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: '50%', background: ps.partner?.color || '#444',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 11, fontWeight: 700, color: '#fff', flexShrink: 0
+            }}>{ps.partner?.initials || '?'}</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 12, color: '#cde', fontWeight: 500 }}>{ps.partner?.name || 'Ukendt'}</div>
+              <div style={{ fontSize: 10, color: '#8fafc4', marginTop: 1 }}>
+                {ps.matches_played} kampe · {ps.matches_won}V {ps.matches_played - ps.matches_won}T · {winPct}% vundet
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#f5e642' }}>{ps.points_together}</div>
+              <div style={{ fontSize: 9, color: '#6fafc4' }}>point</div>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
