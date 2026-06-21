@@ -4,11 +4,11 @@
   "private": true,
   "homepage": ".",
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.22.0",
-    "@supabase/supabase-js": "^2.39.0",
-    "react-scripts": "5.0.1"
+    "@supabase/supabase-js": "^2.108.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.4",
+    "react-scripts": "^0.0.0"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -16,7 +16,13 @@
     "test": "react-scripts test"
   },
   "browserslist": {
-    "production": [">0.2%", "not dead", "not op_mini all"],
-    "development": ["last 1 chrome version"]
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version"
+    ]
   }
 }
