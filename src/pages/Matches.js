@@ -171,7 +171,7 @@ export default function Matches() {
 
   const MatchCard = ({ m }) => {
     const { day, mon } = formatDate(m.match_date)
-    const isPast = m.match_date < now || m.score_us
+    const isPast = true // Vis altid resultat-knap
     const hasResult = m.score_us
     const sets = [
       m.set1_us != null ? `${m.set1_us}-${m.set1_them}` : null,
