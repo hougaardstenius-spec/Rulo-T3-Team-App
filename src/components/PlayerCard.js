@@ -205,12 +205,18 @@ export function PlayerCardDetail({ player, stats, awards, onBack }) {
 
 // Partner stats section — vises nederst på det udvidede kort
 export function PartnerStatsSection({ partnerStats }) {
-  if (!partnerStats || partnerStats.length === 0) return (
+  const qualified = (partnerStats || []).filter(ps => ps.matches_played >= 3)
+
+  if (qualified.length === 0) return (
     <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '12px 14px', marginTop: 8 }}>
       <div style={{ fontSize: 10, color: '#6fafc4', fontWeight: 700, letterSpacing: '.6px', textTransform: 'uppercase', marginBottom: 6 }}>
         Makker-statistik
       </div>
-      <div style={{ fontSize: 12, color: '#6fafc4' }}>Ingen kampe registreret endnu</div>
+      <div style={{ fontSize: 12, color: '#6fafc4' }}>
+        {(partnerStats || []).length > 0
+          ? 'Minimum 3 kampe sammen kræves for at vise statistik'
+          : 'Ingen kampe registreret endnu'}
+      </div>
     </div>
   )
 
@@ -219,7 +225,7 @@ export function PartnerStatsSection({ partnerStats }) {
       <div style={{ fontSize: 10, color: '#6fafc4', fontWeight: 700, letterSpacing: '.6px', textTransform: 'uppercase', marginBottom: 10 }}>
         Makker-statistik
       </div>
-      {partnerStats.map((ps, i) => {
+      {qualified.map((ps, i) => {
         const winPct = ps.matches_played > 0 ? Math.round((ps.matches_won / ps.matches_played) * 100) : 0
         return (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
