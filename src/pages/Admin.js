@@ -12,7 +12,7 @@ const STAT_GROUPS = [
 ]
 
 const ALL_STAT_KEYS = STAT_GROUPS.flatMap(g => g.stats.map(s => s.key))
-const ADMIN_PIN = '1234'
+const ADMIN_PIN = '1811'
 
 function StatSlider({ label, value, onChange }) {
   const barColor = value >= 80 ? '#2d9e62' : value >= 65 ? '#c9a227' : '#e24b4a'
