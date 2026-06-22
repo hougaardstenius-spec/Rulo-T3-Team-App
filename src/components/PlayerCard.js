@@ -111,7 +111,11 @@ export function PlayerCardMini({ player, stats, onClick }) {
           <div className="pcard-name">{player.name}</div>
           <div className="pcard-sub">OFF {off} · DEF {def}</div>
         </div>
-        <div className="pcard-avatar" style={{ background: player.color }}>{player.initials}</div>
+        <div className="pcard-avatar" style={{ background: player.color, overflow: 'hidden', padding: 0 }}>
+          {player.avatar_url
+            ? <img src={player.avatar_url} alt={player.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            : player.initials}
+        </div>
       </div>
       <div className="pcard-stats">
         {[['GRL', grl], ['OVH', ovh], ['VOL', vol]].map(([l, v]) => (
@@ -152,7 +156,11 @@ export function PlayerCardDetail({ player, stats, awards, onBack }) {
       <button className="back-btn" onClick={onBack}>← Alle spillere</button>
       <div className="card-expanded">
         <div className="card-exp-header">
-          <div className="card-exp-avatar" style={{ background: player.color }}>{player.initials}</div>
+          <div className="card-exp-avatar" style={{ background: player.color, overflow: 'hidden', padding: 0 }}>
+            {player.avatar_url
+              ? <img src={player.avatar_url} alt={player.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+              : player.initials}
+          </div>
           <div style={{ flex: 1 }}>
             <div className="card-exp-name">{player.name}</div>
             <div className="card-exp-sub">Position: {player.position}</div>
