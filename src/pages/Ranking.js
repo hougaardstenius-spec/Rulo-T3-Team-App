@@ -57,21 +57,13 @@ export default function Ranking() {
   }, [])
 
   const copyRankingMessage = () => {
+    const medals = ['1.','2.','3.']
     const top3 = rows.slice(0, 3).map((r, i) => {
-      const medals = ['🥇','🥈','🥉']
       const p = r.players
-      return `${medals[i]} ${p?.name} — ${r.points} pts (${r.wins}V ${r.losses}T)`
+      return medals[i] + ' ' + (p?.name || '') + ' - ' + r.points + ' pts (' + r.wins + 'V ' + r.losses + 'T)'
     }).join('\n')
-    const msg = [
-      '📊 Ranglisten er opdateret! Sæson 2026',
-      '',
-      top3,
-      '',
-      'Se hele ranglisten i appen:',
-      'https://hougaardsstenius-spec.github.io/Rulo-T3-Team-App',
-    ].join('
-')
-    navigator.clipboard.writeText(msg)
+    const lines = ['Ranglisten er opdateret! Saeson 2026', '', top3, '', 'Se hele ranglisten:', 'https://hougaardsstenius-spec.github.io/Rulo-T3-Team-App']
+    navigator.clipboard.writeText(lines.join('\n'))
   }
 
   if (loading) return <div className="loading">Henter rangliste...</div>

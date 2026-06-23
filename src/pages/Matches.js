@@ -173,33 +173,20 @@ export default function Matches() {
 
   const copyMatchMessage = (m) => {
     const date = new Date(m.match_date).toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' })
-    const time = m.location ? `📍 ${m.location}` : ''
-    const opponent = m.opponent ? `mod ${m.opponent}` : ''
-    const type = m.match_type === 'official' ? '🏆 Officiel holdkamp' : '🏓 Træningskamp'
-    const msg = [
-      `${type} tilføjet!`,
-      ``,
-      `📅 ${date}`,
-      m.location ? `📍 ${m.location}` : null,
-      m.opponent ? `🆚 ${m.opponent}` : null,
-      ``,
-      `Meld dig klar i appen:`,
-      `https://hougaardsstenius-spec.github.io/Rulo-T3-Team-App`,
-    ].filter(l => l !== null).join('\n')
-    navigator.clipboard.writeText(msg)
-    showToast('Besked kopieret — klar til Messenger! 📋')
+    const type = m.match_type === 'official' ? 'Officiel holdkamp' : 'Traningskamp'
+    const lines = [type + ' tilfojet!', '', 'Dato: ' + date]
+    if (m.location) lines.push('Sted: ' + m.location)
+    if (m.opponent) lines.push('Mod: ' + m.opponent)
+    lines.push('', 'Meld dig klar i appen:')
+    lines.push('https://hougaardsstenius-spec.github.io/Rulo-T3-Team-App')
+    navigator.clipboard.writeText(lines.join('\n'))
+    showToast('Besked kopieret!')
   }
 
   const copyRankingMessage = () => {
-    const msg = [
-      '📊 Ranglisten er opdateret!',
-      '',
-      'Se den nye rangliste i appen:',
-      'https://hougaardsstenius-spec.github.io/Rulo-T3-Team-App',
-    ].join('
-')
-    navigator.clipboard.writeText(msg)
-    showToast('Besked kopieret — klar til Messenger! 📋')
+    const lines = ['Ranglisten er opdateret!', '', 'Se den nye rangliste i appen:', 'https://hougaardsstenius-spec.github.io/Rulo-T3-Team-App']
+    navigator.clipboard.writeText(lines.join('\n'))
+    showToast('Besked kopieret!')
   }
 
   const preview = modalMode === 'result' ? computePreview(form) : null
