@@ -171,6 +171,38 @@ export default function Matches() {
     load()
   }
 
+  const copyMatchMessage = (m) => {
+    const date = new Date(m.match_date).toLocaleDateString('da-DK', { weekday: 'long', day: 'numeric', month: 'long' })
+    const time = m.location ? `📍 ${m.location}` : ''
+    const opponent = m.opponent ? `mod ${m.opponent}` : ''
+    const type = m.match_type === 'official' ? '🏆 Officiel holdkamp' : '🏓 Træningskamp'
+    const msg = [
+      `${type} tilføjet!`,
+      ``,
+      `📅 ${date}`,
+      m.location ? `📍 ${m.location}` : null,
+      m.opponent ? `🆚 ${m.opponent}` : null,
+      ``,
+      `Meld dig klar i appen:`,
+      `https://hougaardsstenius-spec.github.io/Rulo-T3-Team-App`,
+    ].filter(l => l !== null).join('
+')
+    navigator.clipboard.writeText(msg)
+    showToast('Besked kopieret — klar til Messenger! 📋')
+  }
+
+  const copyRankingMessage = () => {
+    const msg = [
+      '📊 Ranglisten er opdateret!',
+      '',
+      'Se den nye rangliste i appen:',
+      'https://hougaardsstenius-spec.github.io/Rulo-T3-Team-App',
+    ].join('
+')
+    navigator.clipboard.writeText(msg)
+    showToast('Besked kopieret — klar til Messenger! 📋')
+  }
+
   const preview = modalMode === 'result' ? computePreview(form) : null
   const now = new Date().toISOString().split('T')[0]
 
@@ -251,6 +283,10 @@ export default function Matches() {
           <button onClick={() => { setSelectedMatch(m); setModalMode('result'); setForm({ ...EMPTY_FORM, match_type: m.match_type, set1_us: m.set1_us??'', set1_them: m.set1_them??'', set2_us: m.set2_us??'', set2_them: m.set2_them??'', set3_us: m.set3_us??'', set3_them: m.set3_them??'' }); setShowModal(true) }}
             style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: hasResult ? '#e8f5ee' : 'none', color: hasResult ? '#1a7a4a' : 'var(--color-text-secondary)', cursor: 'pointer' }}>
             {hasResult ? '✓ Resultat' : '+ Resultat'}
+          </button>
+          <button onClick={() => copyMatchMessage(m)}
+            style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer' }}>
+            📋 Del
           </button>
         </div>
 

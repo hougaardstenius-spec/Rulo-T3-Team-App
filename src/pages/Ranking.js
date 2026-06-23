@@ -56,6 +56,25 @@ export default function Ranking() {
     load()
   }, [])
 
+  const copyRankingMessage = () => {
+    const top3 = rows.slice(0, 3).map((r, i) => {
+      const medals = ['🥇','🥈','🥉']
+      const p = r.players
+      return `${medals[i]} ${p?.name} — ${r.points} pts (${r.wins}V ${r.losses}T)`
+    }).join('
+')
+    const msg = [
+      '📊 Ranglisten er opdateret! Sæson 2026',
+      '',
+      top3,
+      '',
+      'Se hele ranglisten i appen:',
+      'https://hougaardsstenius-spec.github.io/Rulo-T3-Team-App',
+    ].join('
+')
+    navigator.clipboard.writeText(msg)
+  }
+
   if (loading) return <div className="loading">Henter rangliste...</div>
 
   const posClass = ['', 'gold', 'silver', 'bronze']
@@ -64,7 +83,15 @@ export default function Ranking() {
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <span style={{ fontSize: 16, fontWeight: 500 }}>Rangliste</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>Sæson 2026</span>
+        {tab === 'matches' && rows.length > 0 && (
+          <button onClick={() => { copyRankingMessage(); }}
+            style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer' }}>
+            📋 Del
+          </button>
+        )}
+      </div>
       </div>
 
       {/* Tab switcher */}
