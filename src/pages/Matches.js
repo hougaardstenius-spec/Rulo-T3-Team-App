@@ -185,8 +185,7 @@ export default function Matches() {
       ``,
       `Meld dig klar i appen:`,
       `https://hougaardsstenius-spec.github.io/Rulo-T3-Team-App`,
-    ].filter(l => l !== null).join('
-')
+    ].filter(l => l !== null).join('\n')
     navigator.clipboard.writeText(msg)
     showToast('Besked kopieret — klar til Messenger! 📋')
   }

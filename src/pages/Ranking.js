@@ -61,8 +61,7 @@ export default function Ranking() {
       const medals = ['🥇','🥈','🥉']
       const p = r.players
       return `${medals[i]} ${p?.name} — ${r.points} pts (${r.wins}V ${r.losses}T)`
-    }).join('
-')
+    }).join('\n')
     const msg = [
       '📊 Ranglisten er opdateret! Sæson 2026',
       '',
