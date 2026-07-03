@@ -296,34 +296,286 @@ export default function Admin() {
 
   // HOLD MANAGEMENT (kun master)
   if (adminTab === 'clubs') return (
-    <>
-      <AdminHeader />
-      <AdminTabs />
-      <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 14 }}>Oversigt over alle hold og spillere</div>
-      {clubs.map(club => {
-        const clubPids = clubPlayers.filter(cp => cp.club_id === club.id).map(cp => cp.player_id)
-        const clubPs = allPlayers.filter(p => clubPids.includes(p.id))
-        return (
-          <div key={club.id} style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '14px', marginBottom: 10 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <div style={{ fontSize: 15, fontWeight: 600 }}>{club.name}</div>
-              <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>{clubPs.length} spillere · PIN: {club.captain_pin}</span>
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {clubPs.map(p => (
-                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--color-background-secondary)', borderRadius: 20, padding: '4px 10px 4px 4px' }}>
-                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: p.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff' }}>{p.initials}</div>
-                  <span style={{ fontSize: 12 }}>{p.name}</span>
-                </div>
-              ))}
-              {clubPs.length === 0 && <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>Ingen spillere endnu</span>}
-            </div>
-          </div>
-        )
-      })}
-      {ToastEl}
-    </>
+    <ClubManagement
+      clubs={clubs}
+      allPlayers={allPlayers}
+      clubPlayers={clubPlayers}
+      setClubPlayers={setClubPlayers}
+      setAllPlayers={setAllPlayers}
+      AdminHeader={AdminHeader}
+      AdminTabs={AdminTabs}
+      showToast={showToast}
+      ToastEl={ToastEl}
+    />
   )
 
   return null
+}
+
+// ── HOLD MANAGEMENT KOMPONENT ──
+function ClubManagement({ clubs, allPlayers, clubPlayers, setClubPlayers, setAllPlayers, AdminHeader, AdminTabs, showToast, ToastEl }) {
+  const COLORS = ['#1a7a4a','#185fa5','#854f0b','#722439','#534ab7','#0f6e56','#993c1d','#1a5c8a','#5f5e5a','#7a3f7a','#c9a227','#2d6a8a']
+  const EMPTY_PLAYER = { name: '', initials: '', color: '#1a7a4a', position: 'HØ', club_id: '' }
+
+  const [showAddPlayer, setShowAddPlayer] = useState(false)
+  const [editPlayer, setEditPlayer] = useState(null)
+  const [form, setForm] = useState(EMPTY_PLAYER)
+  const [saving, setSaving] = useState(false)
+  const [expandedClub, setExpandedClub] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
+
+  const setF = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const openAdd = (clubId) => {
+    setForm({ ...EMPTY_PLAYER, club_id: clubId })
+    setEditPlayer(null)
+    setShowAddPlayer(true)
+  }
+
+  const openEdit = (player) => {
+    const cp = clubPlayers.find(c => c.player_id === player.id)
+    setForm({ name: player.name, initials: player.initials, color: player.color, position: player.position, club_id: cp?.club_id || '' })
+    setEditPlayer(player)
+    setShowAddPlayer(true)
+  }
+
+  const savePlayer = async () => {
+    if (!form.name || !form.initials) { showToast('Udfyld navn og initialer'); return }
+    setSaving(true)
+
+    if (editPlayer) {
+      // Opdater eksisterende spiller
+      await supabase.from('players').update({
+        name: form.name, initials: form.initials.toUpperCase(),
+        color: form.color, position: form.position
+      }).eq('id', editPlayer.id)
+
+      // Opdater hold-tilknytning hvis ændret
+      const currentCp = clubPlayers.find(c => c.player_id === editPlayer.id)
+      if (form.club_id && currentCp?.club_id !== form.club_id) {
+        if (currentCp) {
+          await supabase.from('club_players').update({ club_id: form.club_id }).eq('id', currentCp.id)
+        } else {
+          await supabase.from('club_players').insert({ player_id: editPlayer.id, club_id: form.club_id })
+        }
+      }
+
+      setAllPlayers(prev => prev.map(p => p.id === editPlayer.id
+        ? { ...p, name: form.name, initials: form.initials.toUpperCase(), color: form.color, position: form.position }
+        : p))
+      if (form.club_id && currentCp?.club_id !== form.club_id) {
+        setClubPlayers(prev => prev.map(cp => cp.player_id === editPlayer.id ? { ...cp, club_id: form.club_id } : cp))
+      }
+      showToast('Spiller opdateret!')
+    } else {
+      // Opret ny spiller
+      const { data: newPlayer } = await supabase.from('players').insert({
+        name: form.name, initials: form.initials.toUpperCase(),
+        color: form.color, position: form.position
+      }).select().single()
+
+      if (newPlayer) {
+        // Tilknyt til hold
+        if (form.club_id) {
+          await supabase.from('club_players').insert({ player_id: newPlayer.id, club_id: form.club_id })
+          setClubPlayers(prev => [...prev, { player_id: newPlayer.id, club_id: form.club_id }])
+        }
+        // Opret tom stats-række
+        await supabase.from('player_stats').insert({ player_id: newPlayer.id })
+        setAllPlayers(prev => [...prev, newPlayer])
+        showToast(`${form.name} tilføjet!`)
+      }
+    }
+
+    setSaving(false)
+    setShowAddPlayer(false)
+    setForm(EMPTY_PLAYER)
+    setEditPlayer(null)
+  }
+
+  const removeFromClub = async (playerId, clubId) => {
+    await supabase.from('club_players').delete().eq('player_id', playerId).eq('club_id', clubId)
+    setClubPlayers(prev => prev.filter(cp => !(cp.player_id === playerId && cp.club_id === clubId)))
+    setConfirmDelete(null)
+    showToast('Spiller fjernet fra hold')
+  }
+
+  const addToClub = async (playerId, clubId) => {
+    const exists = clubPlayers.find(cp => cp.player_id === playerId && cp.club_id === clubId)
+    if (exists) { showToast('Spilleren er allerede på dette hold'); return }
+    await supabase.from('club_players').insert({ player_id: playerId, club_id: clubId })
+    setClubPlayers(prev => [...prev, { player_id: playerId, club_id: clubId }])
+    showToast('Spiller tilføjet til hold!')
+  }
+
+  // Spillere uden hold
+  const unassigned = allPlayers.filter(p => !clubPlayers.some(cp => cp.player_id === p.id))
+
+  return (
+    <>
+      <AdminHeader />
+      <AdminTabs />
+
+      {/* Hold-oversigt */}
+      {clubs.map(club => {
+        const clubPids = clubPlayers.filter(cp => cp.club_id === club.id).map(cp => cp.player_id)
+        const clubPs = allPlayers.filter(p => clubPids.includes(p.id))
+        const isExpanded = expandedClub === club.id
+
+        return (
+          <div key={club.id} style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}>
+            {/* Hold header */}
+            <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+              onClick={() => setExpandedClub(isExpanded ? null : club.id)}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 15, fontWeight: 600 }}>{club.name}</div>
+                <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
+                  {clubPs.length} spillere · Kaptajn-PIN: {club.captain_pin}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: -4 }}>
+                {clubPs.slice(0, 5).map(p => (
+                  <div key={p.id} style={{ width: 28, height: 28, borderRadius: '50%', background: p.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', border: '2px solid var(--color-background-primary)', marginLeft: -6 }}>{p.initials}</div>
+                ))}
+                {clubPs.length > 5 && <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#666', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#fff', border: '2px solid var(--color-background-primary)', marginLeft: -6 }}>+{clubPs.length - 5}</div>}
+              </div>
+              <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>{isExpanded ? '▲' : '▼'}</span>
+            </div>
+
+            {/* Expanded spillerliste */}
+            {isExpanded && (
+              <div style={{ borderTop: '0.5px solid var(--color-border-tertiary)', padding: 14, background: 'var(--color-background-secondary)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {clubPs.map(p => (
+                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--color-background-primary)', borderRadius: 10, padding: '8px 12px' }}>
+                      <div style={{ width: 34, height: 34, borderRadius: '50%', background: p.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                        {p.avatar_url
+                          ? <img src={p.avatar_url} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                          : p.initials}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 500 }}>{p.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>{p.position}</div>
+                      </div>
+                      <button onClick={() => openEdit(p)}
+                        style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)', background: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer' }}>
+                        Rediger
+                      </button>
+                      <button onClick={() => setConfirmDelete({ playerId: p.id, clubId: club.id, name: p.name })}
+                        style={{ fontSize: 11, padding: '4px 10px', borderRadius: 6, border: '0.5px solid #f5b5b5', background: 'none', color: '#e24b4a', cursor: 'pointer' }}>
+                        Fjern
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => openAdd(club.id)}
+                  style={{ width: '100%', marginTop: 10, padding: '10px', border: '1.5px dashed var(--color-border-secondary)', borderRadius: 10, background: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: 13 }}>
+                  + Tilføj spiller til {club.name}
+                </button>
+              </div>
+            )}
+          </div>
+        )
+      })}
+
+      {/* Spillere uden hold */}
+      {unassigned.length > 0 && (
+        <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid #f5a623', borderRadius: 12, padding: 14, marginBottom: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#f5a623', marginBottom: 10 }}>⚠️ Spillere uden hold ({unassigned.length})</div>
+          {unassigned.map(p => (
+            <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <div style={{ width: 30, height: 30, borderRadius: '50%', background: p.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff' }}>{p.initials}</div>
+              <span style={{ flex: 1, fontSize: 13 }}>{p.name}</span>
+              <select onChange={e => e.target.value && addToClub(p.id, e.target.value)} defaultValue=""
+                style={{ fontSize: 12, padding: '4px 8px', borderRadius: 6, border: '0.5px solid var(--color-border-secondary)' }}>
+                <option value="">Tilknyt hold...</option>
+                {clubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Tilføj helt ny spiller knap */}
+      <button onClick={() => openAdd('')}
+        className="btn-primary" style={{ marginTop: 8 }}>
+        + Opret ny spiller
+      </button>
+
+      {/* Modal: Opret / rediger spiller */}
+      {showAddPlayer && (
+        <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setShowAddPlayer(false)}>
+          <div className="modal">
+            <div className="modal-title">
+              {editPlayer ? `Rediger ${editPlayer.name}` : 'Opret ny spiller'}
+              <button className="modal-close" onClick={() => setShowAddPlayer(false)}>✕</button>
+            </div>
+
+            <div className="field">
+              <label>Fuldt navn</label>
+              <input value={form.name} onChange={e => setF('name', e.target.value)} placeholder="fx Marcus Karlsen" />
+            </div>
+
+            <div className="field">
+              <label>Initialer (2-3 bogstaver)</label>
+              <input value={form.initials} onChange={e => setF('initials', e.target.value.toUpperCase())} placeholder="fx MK" maxLength={3} />
+            </div>
+
+            <div className="field">
+              <label>Position</label>
+              <select value={form.position} onChange={e => setF('position', e.target.value)}>
+                <option value="HØ">Højre side (HØ)</option>
+                <option value="VN">Venstre side (VN)</option>
+              </select>
+            </div>
+
+            <div className="field">
+              <label>Hold</label>
+              <select value={form.club_id} onChange={e => setF('club_id', e.target.value)}>
+                <option value="">Vælg hold</option>
+                {clubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+
+            <div className="field">
+              <label>Farve på spillerkort</label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                {COLORS.map(col => (
+                  <div key={col} onClick={() => setF('color', col)}
+                    style={{ width: 32, height: 32, borderRadius: '50%', background: col, cursor: 'pointer', border: form.color === col ? '3px solid #fff' : '3px solid transparent', boxShadow: form.color === col ? '0 0 0 2px #2d9e62' : 'none', transition: 'all .15s' }} />
+                ))}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', background: form.color, border: '2px solid rgba(0,0,0,0.1)' }} />
+                <span style={{ fontSize: 12, color: 'var(--color-text-secondary)' }}>Initialer vil vises med denne baggrund</span>
+              </div>
+            </div>
+
+            <button className="btn-primary" onClick={savePlayer} disabled={saving}>
+              {saving ? 'Gemmer...' : editPlayer ? 'Gem ændringer' : 'Opret spiller'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bekræft fjernelse */}
+      {confirmDelete && (
+        <div className="modal-backdrop" onClick={() => setConfirmDelete(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">Fjern spiller fra hold</div>
+            <p style={{ fontSize: 14, marginBottom: 20, color: 'var(--color-text-secondary)' }}>
+              Er du sikker på at du vil fjerne <strong>{confirmDelete.name}</strong> fra dette hold? Spilleren og deres data slettes ikke — kun holdtilknytningen.
+            </p>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setConfirmDelete(null)} style={{ flex: 1, padding: 12, border: '0.5px solid var(--color-border-secondary)', borderRadius: 10, background: 'none', cursor: 'pointer', fontSize: 14 }}>Annuller</button>
+              <button onClick={() => removeFromClub(confirmDelete.playerId, confirmDelete.clubId)}
+                style={{ flex: 1, padding: 12, border: 'none', borderRadius: 10, background: '#e24b4a', color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}>Fjern</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {ToastEl}
+    </>
+  )
 }
