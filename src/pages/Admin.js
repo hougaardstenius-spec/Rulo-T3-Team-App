@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useContext } from 'react'
 import { supabase } from '../lib/supabase'
 import { useToast } from '../hooks/useToast'
 import { avg } from '../lib/helpers'
+import { AppContext } from '../App'
+import { loadAuth, saveAuth, clearAuth, getAuthLevel } from '../lib/auth'
 
 const STAT_GROUPS = [
   { label: 'Grundslag', color: '#2d9e62', stats: [{ key: 'forhånd', label: 'Forhånd' }, { key: 'baghånd', label: 'Baghånd' }] },
@@ -10,9 +12,8 @@ const STAT_GROUPS = [
   { label: 'Omstillingsslag', color: '#854f0b', stats: [{ key: 'chiquita', label: 'Chiquita' }, { key: 'lob', label: 'Lob' }] },
   { label: 'Generelt', color: '#534ab7', stats: [{ key: 'glasspil', label: 'Spil efter glas' }, { key: 'spilforstaelse', label: 'Spilforståelse' }, { key: 'bevaegelse', label: 'Bevægelse' }, { key: 'kommunikation', label: 'Kommunikation' }] },
 ]
-
 const ALL_STAT_KEYS = STAT_GROUPS.flatMap(g => g.stats.map(s => s.key))
-const ADMIN_PIN = '1811'
+const MASTER_PIN = '9999'
 
 function StatSlider({ label, value, onChange }) {
   const barColor = value >= 80 ? '#2d9e62' : value >= 65 ? '#c9a227' : '#e24b4a'
@@ -35,45 +36,68 @@ function StatSlider({ label, value, onChange }) {
 
 function TabBtn({ label, active, onClick }) {
   return (
-    <button onClick={onClick} style={{
-      flex: 1, padding: '9px 8px', border: 'none', borderRadius: 8,
-      background: active ? '#0d1f2d' : 'none',
-      color: active ? '#fff' : 'var(--color-text-secondary)',
-      fontSize: 13, fontWeight: active ? 600 : 400, cursor: 'pointer', transition: 'all .15s'
-    }}>{label}</button>
+    <button onClick={onClick} style={{ flex: 1, padding: '9px 8px', border: 'none', borderRadius: 8, background: active ? '#0d1f2d' : 'none', color: active ? '#fff' : 'var(--color-text-secondary)', fontSize: 13, fontWeight: active ? 600 : 400, cursor: 'pointer', transition: 'all .15s' }}>{label}</button>
   )
 }
 
 export default function Admin() {
+  const { clubs } = useContext(AppContext)
   const [players, setPlayers] = useState([])
+  const [allPlayers, setAllPlayers] = useState([])
   const [statsMap, setStatsMap] = useState({})
   const [matches, setMatches] = useState([])
+  const [clubPlayers, setClubPlayers] = useState([])
   const [selected, setSelected] = useState(null)
   const [localStats, setLocalStats] = useState({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [pin, setPin] = useState('')
-  const [unlocked, setUnlocked] = useState(false)
-  const [adminTab, setAdminTab] = useState('ratings') // 'ratings' | 'voting'
+  const [auth, setAuth] = useState(null)
+  const [adminTab, setAdminTab] = useState('ratings')
   const { showToast, ToastEl } = useToast()
 
   useEffect(() => {
-    if (!unlocked) return
+    if (!auth) return
     async function load() {
-      const [{ data: pl }, { data: st }, { data: m }] = await Promise.all([
+      const [{ data: pl }, { data: st }, { data: m }, { data: cp }] = await Promise.all([
         supabase.from('players').select('*').order('name'),
         supabase.from('player_stats').select('*'),
         supabase.from('matches').select('*').order('match_date', { ascending: false }),
+        supabase.from('club_players').select('*'),
       ])
-      setPlayers(pl || [])
+      setAllPlayers(pl || [])
+      setClubPlayers(cp || [])
+
+      // Kaptajner kan kun se egne hold-spillere
+      if (auth.level === 'captain' && auth.club) {
+        const myPlayerIds = (cp || []).filter(c => c.club_id === auth.club.id).map(c => c.player_id)
+        setPlayers((pl || []).filter(p => myPlayerIds.includes(p.id)))
+        setMatches((m || []).filter(match => match.club_id === auth.club.id))
+      } else {
+        setPlayers(pl || [])
+        setMatches(m || [])
+      }
+
       const sm = {}
       ;(st || []).forEach(s => { sm[s.player_id] = s })
       setStatsMap(sm)
-      setMatches(m || [])
       setLoading(false)
     }
     load()
-  }, [unlocked])
+  }, [auth])
+
+  const handleLogin = () => {
+    if (pin === MASTER_PIN) {
+      setAuth({ level: 'master', club: null })
+      return
+    }
+    const club = clubs.find(c => c.captain_pin === pin)
+    if (club) {
+      setAuth({ level: 'captain', club })
+      return
+    }
+    showToast('Forkert PIN')
+  }
 
   const selectPlayer = (player) => {
     setSelected(player)
@@ -108,20 +132,23 @@ export default function Admin() {
   const overall = Math.round((offScore + defScore + genScore) / 3)
 
   // PIN screen
-  if (!unlocked) return (
+  if (!auth) return (
     <div style={{ padding: 24 }}>
       <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 6 }}>Admin</div>
-      <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 20 }}>Indtast PIN for at fortsætte</div>
+      <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 20 }}>
+        Indtast PIN for at fortsætte
+      </div>
       <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: 20, maxWidth: 280 }}>
         <div className="field">
           <label>PIN-kode</label>
           <input type="password" value={pin} onChange={e => setPin(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && (pin === ADMIN_PIN ? setUnlocked(true) : showToast('Forkert PIN'))}
+            onKeyDown={e => e.key === 'Enter' && handleLogin()}
             placeholder="••••" maxLength={8} />
         </div>
-        <button className="btn-primary" onClick={() => pin === ADMIN_PIN ? setUnlocked(true) : showToast('Forkert PIN')}>
-          Lås op
-        </button>
+        <button className="btn-primary" onClick={handleLogin}>Lås op</button>
+        <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 12, textAlign: 'center' }}>
+          Master PIN · Hold-PIN for kaptajner
+        </div>
       </div>
       {ToastEl}
     </div>
@@ -129,11 +156,16 @@ export default function Admin() {
 
   if (loading) return <div className="loading">Henter data...</div>
 
-  // Tab navigation
   const AdminHeader = () => (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-      <span style={{ fontSize: 16, fontWeight: 500 }}>Admin</span>
-      <button onClick={() => { setUnlocked(false); setSelected(null) }} style={{ fontSize: 12, color: 'var(--color-text-tertiary)', background: 'none', border: 'none', cursor: 'pointer' }}>Lås</button>
+      <div>
+        <span style={{ fontSize: 16, fontWeight: 500 }}>Admin</span>
+        <span style={{ fontSize: 11, color: auth.level === 'master' ? '#c9a227' : '#2d9e62', marginLeft: 8, fontWeight: 600 }}>
+          {auth.level === 'master' ? '⭐ Master' : `⚽ ${auth.club?.name}`}
+        </span>
+      </div>
+      <button onClick={() => { setAuth(null); setPin(''); setSelected(null) }}
+        style={{ fontSize: 12, color: 'var(--color-text-tertiary)', background: 'none', border: 'none', cursor: 'pointer' }}>Lås</button>
     </div>
   )
 
@@ -141,15 +173,21 @@ export default function Admin() {
     <div style={{ display: 'flex', background: 'var(--color-background-secondary)', borderRadius: 10, padding: 3, marginBottom: 16, gap: 2 }}>
       <TabBtn label="⭐ Ratings" active={adminTab === 'ratings'} onClick={() => { setAdminTab('ratings'); setSelected(null) }} />
       <TabBtn label="🏆 Afstemning" active={adminTab === 'voting'} onClick={() => setAdminTab('voting')} />
+      {auth.level === 'master' && (
+        <TabBtn label="🏓 Hold" active={adminTab === 'clubs'} onClick={() => setAdminTab('clubs')} />
+      )}
     </div>
   )
 
-  // RATINGS — spiller valg
+  // RATINGS — spiller liste
   if (adminTab === 'ratings' && !selected) return (
     <div>
       <AdminHeader />
       <AdminTabs />
-      <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 12 }}>Vælg en spiller for at opdatere ratings</div>
+      <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 12 }}>
+        Vælg spiller for at opdatere ratings
+        {auth.level === 'captain' && <span style={{ color: '#2d9e62' }}> · {auth.club?.name}</span>}
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {players.map(p => {
           const s = statsMap[p.id] || {}
@@ -185,9 +223,7 @@ export default function Admin() {
     <>
       <AdminHeader />
       <AdminTabs />
-      <button className="back-btn" onClick={() => setSelected(null)} style={{ background: 'rgba(0,0,0,0.06)', color: 'var(--color-text-secondary)' }}>
-        ← Alle spillere
-      </button>
+      <button className="back-btn" onClick={() => setSelected(null)} style={{ background: 'rgba(0,0,0,0.06)', color: 'var(--color-text-secondary)' }}>← Alle spillere</button>
       <div style={{ background: 'linear-gradient(145deg,#1a2e4a 0%,#0d1f2d 100%)', borderRadius: 14, padding: 16, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14, color: '#fff' }}>
         <div style={{ width: 52, height: 52, borderRadius: '50%', background: selected.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, border: '2px solid rgba(255,255,255,0.2)' }}>{selected.initials}</div>
         <div style={{ flex: 1 }}>
@@ -223,55 +259,71 @@ export default function Admin() {
   )
 
   // AFSTEMNING
-  if (adminTab === 'voting') {
-    const recentMatches = matches.slice(0, 10)
-    return (
-      <>
-        <AdminHeader />
-        <AdminTabs />
-        <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 14 }}>
-          Åbn eller luk afstemning for en kamp
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {recentMatches.map(m => {
-            const d = new Date(m.match_date)
-            const dateStr = d.toLocaleDateString('da-DK', { day: 'numeric', month: 'short' })
-            return (
-              <div key={m.id} style={{ background: 'var(--color-background-primary)', border: `0.5px solid ${m.voting_open ? '#a8d5b5' : 'var(--color-border-tertiary)'}`, borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ background: '#0d1f2d', borderRadius: 8, padding: '6px 10px', textAlign: 'center', minWidth: 44, flexShrink: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1 }}>{dateStr}</div>
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>{m.title}</div>
-                  <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span className={`match-type-pill ${m.match_type === 'official' ? 'pill-official' : 'pill-training'}`} style={{ margin: 0 }}>
-                      {m.match_type === 'official' ? 'Officiel' : 'Træning'}
-                    </span>
-                    {m.score_us && <span style={{ color: '#1a7a4a' }}>{m.score_us}–{m.score_them} sæt</span>}
-                  </div>
-                </div>
-                <button
-                  onClick={() => toggleVoting(m)}
-                  style={{
-                    padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500,
-                    background: m.voting_open ? '#1a7a4a' : 'var(--color-background-secondary)',
-                    color: m.voting_open ? '#fff' : 'var(--color-text-secondary)',
-                    transition: 'all .15s', flexShrink: 0
-                  }}
-                >
-                  {m.voting_open ? '✓ Åben' : 'Åbn'}
-                </button>
+  if (adminTab === 'voting') return (
+    <>
+      <AdminHeader />
+      <AdminTabs />
+      <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 14 }}>Åbn eller luk afstemning</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {matches.slice(0, 15).map(m => {
+          const d = new Date(m.match_date)
+          const dateStr = d.toLocaleDateString('da-DK', { day: 'numeric', month: 'short' })
+          return (
+            <div key={m.id} style={{ background: 'var(--color-background-primary)', border: `0.5px solid ${m.voting_open ? '#a8d5b5' : 'var(--color-border-tertiary)'}`, borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ background: '#0d1f2d', borderRadius: 8, padding: '6px 10px', textAlign: 'center', minWidth: 44, flexShrink: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', lineHeight: 1 }}>{dateStr}</div>
               </div>
-            )
-          })}
-          {recentMatches.length === 0 && (
-            <div className="empty"><div className="empty-icon">🏆</div><div className="empty-text">Ingen kampe endnu</div></div>
-          )}
-        </div>
-        {ToastEl}
-      </>
-    )
-  }
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, fontWeight: 500 }}>{m.title}</div>
+                <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>
+                  <span className={`match-type-pill ${m.match_type === 'official' ? 'pill-official' : 'pill-training'}`} style={{ margin: 0 }}>
+                    {m.match_type === 'official' ? 'Officiel' : 'Træning'}
+                  </span>
+                  {m.score_us && <span style={{ color: '#1a7a4a', marginLeft: 6 }}>{m.score_us}–{m.score_them}</span>}
+                </div>
+              </div>
+              <button onClick={() => toggleVoting(m)}
+                style={{ padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 500, background: m.voting_open ? '#1a7a4a' : 'var(--color-background-secondary)', color: m.voting_open ? '#fff' : 'var(--color-text-secondary)', transition: 'all .15s', flexShrink: 0 }}>
+                {m.voting_open ? '✓ Åben' : 'Åbn'}
+              </button>
+            </div>
+          )
+        })}
+      </div>
+      {ToastEl}
+    </>
+  )
+
+  // HOLD MANAGEMENT (kun master)
+  if (adminTab === 'clubs') return (
+    <>
+      <AdminHeader />
+      <AdminTabs />
+      <div style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 14 }}>Oversigt over alle hold og spillere</div>
+      {clubs.map(club => {
+        const clubPids = clubPlayers.filter(cp => cp.club_id === club.id).map(cp => cp.player_id)
+        const clubPs = allPlayers.filter(p => clubPids.includes(p.id))
+        return (
+          <div key={club.id} style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '14px', marginBottom: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div style={{ fontSize: 15, fontWeight: 600 }}>{club.name}</div>
+              <span style={{ fontSize: 11, color: 'var(--color-text-tertiary)' }}>{clubPs.length} spillere · PIN: {club.captain_pin}</span>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {clubPs.map(p => (
+                <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--color-background-secondary)', borderRadius: 20, padding: '4px 10px 4px 4px' }}>
+                  <div style={{ width: 24, height: 24, borderRadius: '50%', background: p.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff' }}>{p.initials}</div>
+                  <span style={{ fontSize: 12 }}>{p.name}</span>
+                </div>
+              ))}
+              {clubPs.length === 0 && <span style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>Ingen spillere endnu</span>}
+            </div>
+          </div>
+        )
+      })}
+      {ToastEl}
+    </>
+  )
 
   return null
 }
