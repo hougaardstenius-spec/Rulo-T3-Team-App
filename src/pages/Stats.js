@@ -6,48 +6,45 @@ export default function Stats() {
   const { clubs, selectedClub } = useContext(AppContext)
   const [players, setPlayers] = useState([])
   const [matchPlayers, setMatchPlayers] = useState([])
-  const [matches, setMatches] = useState([])
   const [clubPlayers, setClubPlayers] = useState([])
   const [loading, setLoading] = useState(true)
-  const [matchTypeFilter, setMatchTypeFilter] = useState('all') // 'all' | 'official' | 'training'
+  const [matchTypeFilter, setMatchTypeFilter] = useState('all')
   const [sortBy, setSortBy] = useState('matches_played')
   const [sortDir, setSortDir] = useState('desc')
 
   useEffect(() => {
     async function load() {
-      const [{ data: pl }, { data: mp }, { data: m }, { data: cp }] = await Promise.all([
+      const [{ data: pl }, { data: mp }, { data: cp }] = await Promise.all([
         supabase.from('players').select('*'),
         supabase.from('match_players').select('*, matches(match_type, club_id, set1_us, set1_them, set2_us, set2_them, set3_us, set3_them, score_us, score_them)'),
-        supabase.from('matches').select('*').not('score_us', 'is', null),
         supabase.from('club_players').select('*'),
       ])
       setPlayers(pl || [])
       setMatchPlayers(mp || [])
-      setMatches(m || [])
       setClubPlayers(cp || [])
       setLoading(false)
     }
     load()
   }, [])
 
-  // Filtrer match_players baseret på hold og kamptype
-  const filtered = matchPlayers.filter(mp => {
-    if (!mp.matches) return false
-    if (matchTypeFilter !== 'all' && mp.matches.match_type !== matchTypeFilter) return false
-    if (selectedClub && mp.matches.club_id !== selectedClub) return false
-    return true
-  })
-
-  // Filtrer spillere baseret på valgt hold
+  // Spillere der skal vises baseret på valgt hold
   const visiblePlayerIds = selectedClub
     ? clubPlayers.filter(cp => cp.club_id === selectedClub).map(cp => cp.player_id)
     : players.map(p => p.id)
+
+  // Filtrer match_players kun på kamptype — IKKE på club_id
+  // Statistik vises for spilleren uanset hvilken kamp det var
+  const filteredByType = matchPlayers.filter(mp => {
+    if (!mp.matches) return false
+    if (matchTypeFilter !== 'all' && mp.matches.match_type !== matchTypeFilter) return false
+    return true
+  })
 
   // Beregn statistik per spiller
   const stats = visiblePlayerIds.map(pid => {
     const p = players.find(x => x.id === pid)
     if (!p) return null
-    const rows = filtered.filter(mp => mp.player_id === pid)
+    const rows = filteredByType.filter(mp => mp.player_id === pid)
 
     let matches_played = rows.length
     let matches_won = rows.filter(r => r.won).length
@@ -65,26 +62,19 @@ export default function Stats() {
         m.set3_us != null ? [Number(m.set3_us), Number(m.set3_them)] : null,
       ].filter(Boolean)
 
-      // Sæt vundet/tabt (fra spillerens perspektiv)
-      // r.won = true means they were on winning side (us)
       sets.forEach(([us, them]) => {
         const playerWonSet = r.won ? us > them : them > us
-        if (playerWonSet) {
-          sets_won++
-          games_won += r.won ? us : them
-          games_lost += r.won ? them : us
-        } else {
-          sets_lost++
-          games_won += r.won ? us : them
-          games_lost += r.won ? them : us
-        }
+        const myGames = r.won ? us : them
+        const theirGames = r.won ? them : us
+        if (playerWonSet) { sets_won++ } else { sets_lost++ }
+        games_won += myGames
+        games_lost += theirGames
       })
 
-      // Kampe vundet til nul (2-0 i sæt)
       if (r.won) {
-        const setsWonCount = Number(m.score_us || 0)
-        const setsLostCount = Number(m.score_them || 0)
-        if (setsWonCount === 2 && setsLostCount === 0) matches_won_to_zero++
+        const setsWon = Number(m.score_us || 0)
+        const setsLost = Number(m.score_them || 0)
+        if (setsWon === 2 && setsLost === 0) matches_won_to_zero++
       }
     })
 
@@ -104,7 +94,6 @@ export default function Stats() {
     }
   }).filter(Boolean)
 
-  // Sortering
   const sorted = [...stats].sort((a, b) => {
     const av = a[sortBy] ?? 0
     const bv = b[sortBy] ?? 0
@@ -125,21 +114,19 @@ export default function Stats() {
     padding: '8px 6px', fontSize: 11, fontWeight: 600, color: '#fff',
     background: sortBy === col ? 'rgba(45,158,98,0.3)' : 'rgba(255,255,255,0.08)',
     cursor: 'pointer', whiteSpace: 'nowrap', textAlign: 'center',
-    borderBottom: '1px solid rgba(255,255,255,0.1)',
-    userSelect: 'none'
-  })
-
-  const tdStyle = (highlight) => ({
-    padding: '8px 6px', fontSize: 12, textAlign: 'center',
-    borderBottom: '0.5px solid var(--color-border-tertiary)',
-    fontWeight: highlight ? 700 : 400,
-    color: highlight ? '#1a7a4a' : 'var(--color-text-primary)',
+    borderBottom: '1px solid rgba(255,255,255,0.1)', userSelect: 'none'
   })
 
   const diffStyle = (val) => ({
-    ...tdStyle(false),
+    padding: '8px 6px', fontSize: 12, textAlign: 'center',
+    borderBottom: '0.5px solid var(--color-border-tertiary)',
     color: val > 0 ? '#1a7a4a' : val < 0 ? '#e24b4a' : 'var(--color-text-secondary)',
     fontWeight: 600,
+  })
+
+  const tdStyle = () => ({
+    padding: '8px 6px', fontSize: 12, textAlign: 'center',
+    borderBottom: '0.5px solid var(--color-border-tertiary)',
   })
 
   if (loading) return <div className="loading">Henter statistik...</div>
@@ -152,8 +139,6 @@ export default function Stats() {
         <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 10 }}>
           Statistik — {currentClub ? currentClub.name : 'Alle hold'}
         </div>
-
-        {/* Filtre */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {[['all','Alle kampe'],['official','Officielle'],['training','Træning']].map(([val, label]) => (
             <button key={val} onClick={() => setMatchTypeFilter(val)}
@@ -194,7 +179,7 @@ export default function Stats() {
             <tbody>
               {sorted.map((s, i) => (
                 <tr key={s.player.id} style={{ background: i % 2 === 0 ? 'var(--color-background-primary)' : 'var(--color-background-secondary)' }}>
-                  <td style={{ ...tdStyle(false), textAlign: 'left', paddingLeft: 12 }}>
+                  <td style={{ ...tdStyle(), textAlign: 'left', paddingLeft: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <div style={{ width: 28, height: 28, borderRadius: '50%', background: s.player.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
                         {s.player.initials}
@@ -202,24 +187,23 @@ export default function Stats() {
                       <span style={{ fontSize: 13, fontWeight: 500 }}>{s.player.name}</span>
                     </div>
                   </td>
-                  <td style={tdStyle(false)}>{s.matches_played}</td>
-                  <td style={{ ...tdStyle(false), color: '#1a7a4a', fontWeight: 600 }}>{s.matches_won}</td>
-                  <td style={{ ...tdStyle(false), color: '#e24b4a' }}>{s.matches_lost}</td>
+                  <td style={tdStyle()}>{s.matches_played}</td>
+                  <td style={{ ...tdStyle(), color: '#1a7a4a', fontWeight: 600 }}>{s.matches_won}</td>
+                  <td style={{ ...tdStyle(), color: '#e24b4a' }}>{s.matches_lost}</td>
                   <td style={diffStyle(s.match_diff)}>{s.match_diff > 0 ? '+' : ''}{s.match_diff}</td>
-                  <td style={tdStyle(false)}>{s.sets_won}</td>
-                  <td style={tdStyle(false)}>{s.sets_lost}</td>
+                  <td style={tdStyle()}>{s.sets_won}</td>
+                  <td style={tdStyle()}>{s.sets_lost}</td>
                   <td style={diffStyle(s.set_diff)}>{s.set_diff > 0 ? '+' : ''}{s.set_diff}</td>
-                  <td style={tdStyle(false)}>{s.games_won}</td>
-                  <td style={tdStyle(false)}>{s.games_lost}</td>
+                  <td style={tdStyle()}>{s.games_won}</td>
+                  <td style={tdStyle()}>{s.games_lost}</td>
                   <td style={diffStyle(s.game_diff)}>{s.game_diff > 0 ? '+' : ''}{s.game_diff}</td>
-                  <td style={{ ...tdStyle(false), color: '#c9a227', fontWeight: 600 }}>{s.matches_won_to_zero}</td>
+                  <td style={{ ...tdStyle(), color: '#c9a227', fontWeight: 600 }}>{s.matches_won_to_zero}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-
       <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)', marginTop: 10, textAlign: 'center' }}>
         Tryk på kolonneoverskrift for at sortere · 2-0 = kampe vundet til nul
       </div>
