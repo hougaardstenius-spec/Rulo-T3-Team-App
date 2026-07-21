@@ -12,10 +12,16 @@ export function checkClubPin(pin, clubs) {
   return clubs.find(c => c.captain_pin === pin) || null
 }
 
+export function checkFineMasterPin(pin, clubs) {
+  return clubs.find(c => c.fine_master_pin && c.fine_master_pin === pin) || null
+}
+
 export function getAuthLevel(pin, clubs) {
   if (checkMasterPin(pin)) return { level: 'master', club: null }
-  const club = checkClubPin(pin, clubs)
-  if (club) return { level: 'captain', club }
+  const captainClub = checkClubPin(pin, clubs)
+  if (captainClub) return { level: 'captain', club: captainClub }
+  const fineClub = checkFineMasterPin(pin, clubs)
+  if (fineClub) return { level: 'fine_master', club: fineClub }
   return { level: 'none', club: null }
 }
 

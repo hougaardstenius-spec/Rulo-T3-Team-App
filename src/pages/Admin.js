@@ -327,6 +327,14 @@ function ClubManagement({ clubs, allPlayers, clubPlayers, setClubPlayers, setAll
   const [saving, setSaving] = useState(false)
   const [expandedClub, setExpandedClub] = useState(null)
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [finePinOverrides, setFinePinOverrides] = useState({})
+
+  const saveFineMasterPin = async (clubId, value) => {
+    const pin = value.trim()
+    await supabase.from('clubs').update({ fine_master_pin: pin || null }).eq('id', clubId)
+    setFinePinOverrides(prev => ({ ...prev, [clubId]: pin }))
+    showToast('Bødemester-PIN gemt!')
+  }
 
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
@@ -454,6 +462,14 @@ function ClubManagement({ clubs, allPlayers, clubPlayers, setClubPlayers, setAll
             {/* Expanded spillerliste */}
             {isExpanded && (
               <div style={{ borderTop: '0.5px solid var(--color-border-tertiary)', padding: 14, background: 'var(--color-background-secondary)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, background: 'var(--color-background-primary)', borderRadius: 10, padding: '8px 12px' }}>
+                  <label htmlFor={`fine-pin-${club.id}`} style={{ fontSize: 12, color: 'var(--color-text-secondary)', flex: 1 }}>Bødemester-PIN (2-3 personer deler denne)</label>
+                  <input id={`fine-pin-${club.id}`} defaultValue={finePinOverrides[club.id] ?? club.fine_master_pin ?? ''}
+                    onBlur={e => saveFineMasterPin(club.id, e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && e.target.blur()}
+                    placeholder="fx 4321" maxLength={8}
+                    style={{ width: 90, padding: '6px 8px', borderRadius: 6, border: '1px solid #ddd', fontSize: 13, textAlign: 'center' }} />
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {clubPs.map(p => (
                     <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--color-background-primary)', borderRadius: 10, padding: '8px 12px' }}>

@@ -6,6 +6,7 @@ import Vote from './pages/Vote'
 import Ranking from './pages/Ranking'
 import Matches from './pages/Matches'
 import Stats from './pages/Stats'
+import Fines from './pages/Fines'
 import Admin from './pages/Admin'
 import './App.css'
 
@@ -40,6 +41,12 @@ const NavIcons = {
   stats: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M3 3v18h18M18 9l-5 5-3-3-4 4" />
+    </svg>
+  ),
+  fines: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v10M9.5 9.5a2.5 2.5 0 0 1 2.5-1.5c1.5 0 2.5.8 2.5 2s-1 1.5-2.5 2-2.5.8-2.5 2 1 2 2.5 2a2.5 2.5 0 0 0 2.5-1.5" />
     </svg>
   ),
   admin: (
@@ -83,6 +90,7 @@ export default function App() {
     { id: 'ranking', icon: NavIcons.ranking, label: 'Rangliste'  },
     { id: 'matches', icon: NavIcons.matches, label: 'Kampe'      },
     { id: 'stats',   icon: NavIcons.stats,   label: 'Statistik'  },
+    { id: 'fines',   icon: NavIcons.fines,   label: 'Bøder'      },
     { id: 'admin',   icon: NavIcons.admin,   label: 'Admin'      },
   ]
 
@@ -137,6 +145,7 @@ export default function App() {
           {tab === 'ranking' && <Ranking />}
           {tab === 'matches' && <Matches />}
           {tab === 'stats'   && <Stats   />}
+          {tab === 'fines'   && <Fines   />}
           {tab === 'admin'   && <Admin   />}
         </main>
       </div>
