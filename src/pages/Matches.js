@@ -13,11 +13,13 @@ function SetInput({ label, us, them, onUs, onThem }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
       <span style={{ fontSize: 12, color: 'var(--color-text-secondary)', width: 44 }}>{label}</span>
-      <input type="number" min="0" max="7" value={us} onChange={e => onUs(e.target.value)} placeholder="Os"
-        style={{ width: 52, padding: '7px 8px', borderRadius: 7, border: '1px solid #ddd', fontSize: 14, textAlign: 'center' }} />
-      <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 700 }}>–</span>
-      <input type="number" min="0" max="7" value={them} onChange={e => onThem(e.target.value)} placeholder="Dem"
-        style={{ width: 52, padding: '7px 8px', borderRadius: 7, border: '1px solid #ddd', fontSize: 14, textAlign: 'center' }} />
+      <input type="number" inputMode="numeric" min="0" max="7" value={us} onChange={e => onUs(e.target.value)} placeholder="Os"
+        aria-label={`${label} — vores partier`}
+        style={{ width: 52, padding: '7px 8px', borderRadius: 7, border: '1px solid #ddd', fontSize: 16, textAlign: 'center' }} />
+      <span style={{ color: 'var(--color-text-tertiary)', fontWeight: 700 }} aria-hidden="true">–</span>
+      <input type="number" inputMode="numeric" min="0" max="7" value={them} onChange={e => onThem(e.target.value)} placeholder="Dem"
+        aria-label={`${label} — modstanders partier`}
+        style={{ width: 52, padding: '7px 8px', borderRadius: 7, border: '1px solid #ddd', fontSize: 16, textAlign: 'center' }} />
     </div>
   )
 }
@@ -192,9 +194,10 @@ export default function Matches() {
   const preview = modalMode === 'result' ? computePreview(form) : null
   const now = new Date().toISOString().split('T')[0]
 
-  const PlayerSelect = ({ value, onChange, exclude = [] }) => (
+  const PlayerSelect = ({ value, onChange, exclude = [], label }) => (
     <select value={value || ''} onChange={e => onChange(e.target.value || null)}
-      style={{ flex: 1, padding: '8px 10px', borderRadius: 8, border: '1px solid #ddd', fontSize: 13 }}>
+      aria-label={label || 'Vælg spiller'}
+      style={{ flex: 1, padding: '8px 10px', borderRadius: 8, border: '1px solid #ddd', fontSize: 16 }}>
       <option value="">Vælg spiller</option>
       {players.filter(p => !exclude.includes(p.id)).map(p => (
         <option key={p.id} value={p.id}>{p.name}</option>
@@ -235,7 +238,7 @@ export default function Matches() {
             </div>
           </div>
           {!hasResult && (
-            <button className="match-cal-btn" onClick={() => { downloadICS(m); showToast('Tilføjet til kalender!') }}>📅</button>
+            <button className="match-cal-btn" onClick={() => { downloadICS(m); showToast('Tilføjet til kalender!') }} aria-label="Tilføj til kalender">📅</button>
           )}
         </div>
 
@@ -290,11 +293,12 @@ export default function Matches() {
                   <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ width: 32, height: 32, borderRadius: '50%', background: p.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{p.initials}</div>
                     <span style={{ flex: 1, fontSize: 13 }}>{p.name}</span>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      {[['confirmed','✓','#1a7a4a','#e8f5ee'],['pending','?','#888','#f5f5f5'],['declined','✗','#e24b4a','#fce8e8']].map(([s, label, col, bg]) => (
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {[['confirmed','✓','#1a7a4a','#e8f5ee','Bekræft'],['pending','?','#888','#f5f5f5','Marker som afventer'],['declined','✗','#e24b4a','#fce8e8','Afbud']].map(([s, symbol, col, bg, actionLabel]) => (
                         <button key={s} onClick={() => updateLineupStatus(m.id, p.id, s)}
-                          style={{ width: 28, height: 28, borderRadius: 6, border: 'none', background: status === s ? bg : 'var(--color-background-primary)', color: status === s ? col : 'var(--color-text-tertiary)', fontSize: 13, fontWeight: 700, cursor: 'pointer', transition: 'all .15s' }}>
-                          {label}
+                          aria-label={`${p.name}: ${actionLabel}`} aria-pressed={status === s}
+                          style={{ width: 36, height: 36, borderRadius: 8, border: 'none', background: status === s ? bg : 'var(--color-background-primary)', color: status === s ? col : 'var(--color-text-tertiary)', fontSize: 14, fontWeight: 700, cursor: 'pointer', transition: 'all .15s' }}>
+                          {symbol}
                         </button>
                       ))}
                     </div>
@@ -351,22 +355,22 @@ export default function Matches() {
         <div className="modal-backdrop" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
           <div className="modal" style={{ paddingBottom: 32 }}>
             {modalMode === 'add' && <>
-              <div className="modal-title">Tilføj kamp<button className="modal-close" onClick={() => setShowModal(false)}>✕</button></div>
-              <div className="field"><label>Titel</label><input value={form.title} onChange={e => setF('title', e.target.value)} placeholder="fx Træningskamp" /></div>
-              <div className="field"><label>Dato</label><input type="date" value={form.match_date} onChange={e => setF('match_date', e.target.value)} /></div>
-              <div className="field"><label>Sted</label><input value={form.location} onChange={e => setF('location', e.target.value)} placeholder="fx Odense Padel Club" /></div>
-              <div className="field"><label>Type</label>
-                <select value={form.match_type} onChange={e => setF('match_type', e.target.value)}>
+              <div className="modal-title">Tilføj kamp<button className="modal-close" onClick={() => setShowModal(false)} aria-label="Luk">✕</button></div>
+              <div className="field"><label htmlFor="match-title">Titel</label><input id="match-title" value={form.title} onChange={e => setF('title', e.target.value)} placeholder="fx Træningskamp" /></div>
+              <div className="field"><label htmlFor="match-date">Dato</label><input id="match-date" type="date" value={form.match_date} onChange={e => setF('match_date', e.target.value)} /></div>
+              <div className="field"><label htmlFor="match-location">Sted</label><input id="match-location" value={form.location} onChange={e => setF('location', e.target.value)} placeholder="fx Odense Padel Club" /></div>
+              <div className="field"><label htmlFor="match-type">Type</label>
+                <select id="match-type" value={form.match_type} onChange={e => setF('match_type', e.target.value)}>
                   <option value="training">Træningskamp</option>
                   <option value="official">Officiel holdkamp</option>
                 </select>
               </div>
-              <div className="field"><label>Modstander</label><input value={form.opponent} onChange={e => setF('opponent', e.target.value)} placeholder="fx Kerteminde Padel" /></div>
+              <div className="field"><label htmlFor="match-opponent">Modstander</label><input id="match-opponent" value={form.opponent} onChange={e => setF('opponent', e.target.value)} placeholder="fx Kerteminde Padel" /></div>
               <button className="btn-primary" onClick={addMatch}>Gem kamp</button>
             </>}
 
             {modalMode === 'result' && <>
-              <div className="modal-title">Registrer resultat<button className="modal-close" onClick={() => setShowModal(false)}>✕</button></div>
+              <div className="modal-title">Registrer resultat<button className="modal-close" onClick={() => setShowModal(false)} aria-label="Luk">✕</button></div>
               <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 14 }}>{selectedMatch?.title}</div>
               <div style={{ background: '#f5f5f5', borderRadius: 10, padding: '12px 14px', marginBottom: 16 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: '#888', letterSpacing: '.5px', textTransform: 'uppercase', marginBottom: 10 }}>Sætscore</div>
@@ -394,15 +398,15 @@ export default function Matches() {
               <div style={{ background: '#e8f5ee', borderRadius: 10, padding: '12px 14px', marginBottom: 12 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: '#1a7a4a', letterSpacing: '.5px', textTransform: 'uppercase', marginBottom: 10 }}>Vinderpar</div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <PlayerSelect value={winPair[0]} onChange={v => setWinPair([v, winPair[1]])} exclude={[winPair[1], losePair[0], losePair[1]].filter(Boolean)} />
-                  <PlayerSelect value={winPair[1]} onChange={v => setWinPair([winPair[0], v])} exclude={[winPair[0], losePair[0], losePair[1]].filter(Boolean)} />
+                  <PlayerSelect label="Vinderpar spiller 1" value={winPair[0]} onChange={v => setWinPair([v, winPair[1]])} exclude={[winPair[1], losePair[0], losePair[1]].filter(Boolean)} />
+                  <PlayerSelect label="Vinderpar spiller 2" value={winPair[1]} onChange={v => setWinPair([winPair[0], v])} exclude={[winPair[0], losePair[0], losePair[1]].filter(Boolean)} />
                 </div>
               </div>
               <div style={{ background: '#fce8e8', borderRadius: 10, padding: '12px 14px', marginBottom: 16 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, color: '#a32d2d', letterSpacing: '.5px', textTransform: 'uppercase', marginBottom: 10 }}>Taberpar</div>
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <PlayerSelect value={losePair[0]} onChange={v => setLosePair([v, losePair[1]])} exclude={[winPair[0], winPair[1], losePair[1]].filter(Boolean)} />
-                  <PlayerSelect value={losePair[1]} onChange={v => setLosePair([losePair[0], v])} exclude={[winPair[0], winPair[1], losePair[0]].filter(Boolean)} />
+                  <PlayerSelect label="Taberpar spiller 1" value={losePair[0]} onChange={v => setLosePair([v, losePair[1]])} exclude={[winPair[0], winPair[1], losePair[1]].filter(Boolean)} />
+                  <PlayerSelect label="Taberpar spiller 2" value={losePair[1]} onChange={v => setLosePair([losePair[0], v])} exclude={[winPair[0], winPair[1], losePair[0]].filter(Boolean)} />
                 </div>
               </div>
               <button className="btn-primary" onClick={saveResult}>Gem resultat og beregn point</button>

@@ -106,8 +106,8 @@ export default function Stats() {
   }
 
   const SortIcon = ({ col }) => {
-    if (sortBy !== col) return <span style={{ color: '#ccc', fontSize: 9 }}> ↕</span>
-    return <span style={{ color: '#2d9e62', fontSize: 9 }}> {sortDir === 'desc' ? '↓' : '↑'}</span>
+    if (sortBy !== col) return <span aria-hidden="true" style={{ color: '#ccc', fontSize: 9 }}> ↕</span>
+    return <span aria-hidden="true" style={{ color: '#2d9e62', fontSize: 9 }}> {sortDir === 'desc' ? '↓' : '↑'}</span>
   }
 
   const thStyle = (col) => ({
@@ -115,6 +115,15 @@ export default function Stats() {
     background: sortBy === col ? 'rgba(45,158,98,0.3)' : 'rgba(255,255,255,0.08)',
     cursor: 'pointer', whiteSpace: 'nowrap', textAlign: 'center',
     borderBottom: '1px solid rgba(255,255,255,0.1)', userSelect: 'none'
+  })
+
+  const sortableThProps = (col, label) => ({
+    style: thStyle(col),
+    onClick: () => handleSort(col),
+    onKeyDown: e => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), handleSort(col)),
+    tabIndex: 0,
+    'aria-sort': sortBy === col ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none',
+    'aria-label': `Sortér efter ${label}`,
   })
 
   const diffStyle = (val) => ({
@@ -162,18 +171,18 @@ export default function Stats() {
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 680 }}>
             <thead>
               <tr>
-                <th style={{ ...thStyle('name'), textAlign: 'left', paddingLeft: 12 }}>Navn</th>
-                <th style={thStyle('matches_played')} onClick={() => handleSort('matches_played')}>Kampe<SortIcon col="matches_played"/></th>
-                <th style={thStyle('matches_won')} onClick={() => handleSort('matches_won')}>Sejre<SortIcon col="matches_won"/></th>
-                <th style={thStyle('matches_lost')} onClick={() => handleSort('matches_lost')}>Neder.<SortIcon col="matches_lost"/></th>
-                <th style={thStyle('match_diff')} onClick={() => handleSort('match_diff')}>Diff.<SortIcon col="match_diff"/></th>
-                <th style={thStyle('sets_won')} onClick={() => handleSort('sets_won')}>Sæt +<SortIcon col="sets_won"/></th>
-                <th style={thStyle('sets_lost')} onClick={() => handleSort('sets_lost')}>Sæt -<SortIcon col="sets_lost"/></th>
-                <th style={thStyle('set_diff')} onClick={() => handleSort('set_diff')}>Diff.<SortIcon col="set_diff"/></th>
-                <th style={thStyle('games_won')} onClick={() => handleSort('games_won')}>Partier +<SortIcon col="games_won"/></th>
-                <th style={thStyle('games_lost')} onClick={() => handleSort('games_lost')}>Partier -<SortIcon col="games_lost"/></th>
-                <th style={thStyle('game_diff')} onClick={() => handleSort('game_diff')}>Diff.<SortIcon col="game_diff"/></th>
-                <th style={thStyle('matches_won_to_zero')} onClick={() => handleSort('matches_won_to_zero')}>2-0<SortIcon col="matches_won_to_zero"/></th>
+                <th style={{ ...thStyle('name'), textAlign: 'left', paddingLeft: 12, cursor: 'default' }}>Navn</th>
+                <th {...sortableThProps('matches_played', 'Kampe')}>Kampe<SortIcon col="matches_played"/></th>
+                <th {...sortableThProps('matches_won', 'Sejre')}>Sejre<SortIcon col="matches_won"/></th>
+                <th {...sortableThProps('matches_lost', 'Nederlag')}>Neder.<SortIcon col="matches_lost"/></th>
+                <th {...sortableThProps('match_diff', 'Kampdifference')}>Diff.<SortIcon col="match_diff"/></th>
+                <th {...sortableThProps('sets_won', 'Sæt vundet')}>Sæt +<SortIcon col="sets_won"/></th>
+                <th {...sortableThProps('sets_lost', 'Sæt tabt')}>Sæt -<SortIcon col="sets_lost"/></th>
+                <th {...sortableThProps('set_diff', 'Sætdifference')}>Diff.<SortIcon col="set_diff"/></th>
+                <th {...sortableThProps('games_won', 'Partier vundet')}>Partier +<SortIcon col="games_won"/></th>
+                <th {...sortableThProps('games_lost', 'Partier tabt')}>Partier -<SortIcon col="games_lost"/></th>
+                <th {...sortableThProps('game_diff', 'Partidifference')}>Diff.<SortIcon col="game_diff"/></th>
+                <th {...sortableThProps('matches_won_to_zero', '2-0 sejre')}>2-0<SortIcon col="matches_won_to_zero"/></th>
               </tr>
             </thead>
             <tbody>

@@ -15,19 +15,19 @@ const STAT_GROUPS = [
 const ALL_STAT_KEYS = STAT_GROUPS.flatMap(g => g.stats.map(s => s.key))
 const MASTER_PIN = '9999'
 
-function StatSlider({ label, value, onChange }) {
+function StatSlider({ id, label, value, onChange }) {
   const barColor = value >= 80 ? '#2d9e62' : value >= 65 ? '#c9a227' : '#e24b4a'
   return (
     <div style={{ marginBottom: 14 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-        <label style={{ fontSize: 13, color: 'var(--color-text-primary)' }}>{label}</label>
+        <label htmlFor={id} style={{ fontSize: 13, color: 'var(--color-text-primary)' }}>{label}</label>
         <div style={{ background: '#0d1f2d', color: '#f5e642', fontWeight: 700, fontSize: 15, borderRadius: 6, padding: '2px 9px', minWidth: 38, textAlign: 'center' }}>{value}</div>
       </div>
       <div style={{ position: 'relative', height: 8 }}>
         <div style={{ position: 'absolute', inset: '3px 0', background: 'var(--color-border-tertiary)', borderRadius: 4, overflow: 'hidden' }}>
           <div style={{ width: `${value}%`, height: '100%', background: barColor, borderRadius: 4, transition: 'width .1s' }} />
         </div>
-        <input type="range" min={1} max={100} value={value} onChange={e => onChange(Number(e.target.value))}
+        <input id={id} type="range" min={1} max={100} value={value} onChange={e => onChange(Number(e.target.value))}
           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer', margin: 0 }} />
       </div>
     </div>
@@ -140,8 +140,8 @@ export default function Admin() {
       </div>
       <div style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: 20, maxWidth: 280 }}>
         <div className="field">
-          <label>PIN-kode</label>
-          <input type="password" value={pin} onChange={e => setPin(e.target.value)}
+          <label htmlFor="admin-pin">PIN-kode</label>
+          <input id="admin-pin" type="password" inputMode="numeric" value={pin} onChange={e => setPin(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleLogin()}
             placeholder="••••" maxLength={8} />
         </div>
@@ -197,6 +197,10 @@ export default function Admin() {
           const pOverall = Math.round((pOff + pDef + pGen) / 3)
           return (
             <div key={p.id} onClick={() => selectPlayer(p)}
+              role="button" tabIndex={0}
+              onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), selectPlayer(p))}
+              aria-label={`Rediger ratings for ${p.name}`}
+              className="interactive-card"
               style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}
               onMouseEnter={e => e.currentTarget.style.borderColor = '#2d9e62'}
               onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--color-border-tertiary)'}
@@ -247,7 +251,7 @@ export default function Admin() {
         <div key={group.label} style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, padding: '14px 16px', marginBottom: 12 }}>
           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.8px', textTransform: 'uppercase', color: group.color, marginBottom: 12, paddingBottom: 8, borderBottom: `1px solid ${group.color}22` }}>{group.label}</div>
           {group.stats.map(({ key, label }) => (
-            <StatSlider key={key} label={label} value={localStats[key] ?? 50} onChange={val => setLocalStats(prev => ({ ...prev, [key]: val }))} />
+            <StatSlider key={key} id={`stat-${key}`} label={label} value={localStats[key] ?? 50} onChange={val => setLocalStats(prev => ({ ...prev, [key]: val }))} />
           ))}
         </div>
       ))}
@@ -426,7 +430,12 @@ function ClubManagement({ clubs, allPlayers, clubPlayers, setClubPlayers, setAll
           <div key={club.id} style={{ background: 'var(--color-background-primary)', border: '0.5px solid var(--color-border-tertiary)', borderRadius: 12, marginBottom: 10, overflow: 'hidden' }}>
             {/* Hold header */}
             <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
-              onClick={() => setExpandedClub(isExpanded ? null : club.id)}>
+              onClick={() => setExpandedClub(isExpanded ? null : club.id)}
+              role="button" tabIndex={0}
+              aria-expanded={isExpanded}
+              className="interactive-card"
+              onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), setExpandedClub(isExpanded ? null : club.id))}
+            >
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 15, fontWeight: 600 }}>{club.name}</div>
                 <div style={{ fontSize: 11, color: 'var(--color-text-tertiary)', marginTop: 2 }}>
@@ -439,7 +448,7 @@ function ClubManagement({ clubs, allPlayers, clubPlayers, setClubPlayers, setAll
                 ))}
                 {clubPs.length > 5 && <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#666', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: '#fff', border: '2px solid var(--color-background-primary)', marginLeft: -6 }}>+{clubPs.length - 5}</div>}
               </div>
-              <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }}>{isExpanded ? '▲' : '▼'}</span>
+              <span style={{ color: 'var(--color-text-tertiary)', fontSize: 12 }} aria-hidden="true">{isExpanded ? '▲' : '▼'}</span>
             </div>
 
             {/* Expanded spillerliste */}
@@ -508,41 +517,42 @@ function ClubManagement({ clubs, allPlayers, clubPlayers, setClubPlayers, setAll
           <div className="modal">
             <div className="modal-title">
               {editPlayer ? `Rediger ${editPlayer.name}` : 'Opret ny spiller'}
-              <button className="modal-close" onClick={() => setShowAddPlayer(false)}>✕</button>
+              <button className="modal-close" onClick={() => setShowAddPlayer(false)} aria-label="Luk">✕</button>
             </div>
 
             <div className="field">
-              <label>Fuldt navn</label>
-              <input value={form.name} onChange={e => setF('name', e.target.value)} placeholder="fx Marcus Karlsen" />
+              <label htmlFor="player-name">Fuldt navn</label>
+              <input id="player-name" value={form.name} onChange={e => setF('name', e.target.value)} placeholder="fx Marcus Karlsen" />
             </div>
 
             <div className="field">
-              <label>Initialer (2-3 bogstaver)</label>
-              <input value={form.initials} onChange={e => setF('initials', e.target.value.toUpperCase())} placeholder="fx MK" maxLength={3} />
+              <label htmlFor="player-initials">Initialer (2-3 bogstaver)</label>
+              <input id="player-initials" value={form.initials} onChange={e => setF('initials', e.target.value.toUpperCase())} placeholder="fx MK" maxLength={3} />
             </div>
 
             <div className="field">
-              <label>Position</label>
-              <select value={form.position} onChange={e => setF('position', e.target.value)}>
+              <label htmlFor="player-position">Position</label>
+              <select id="player-position" value={form.position} onChange={e => setF('position', e.target.value)}>
                 <option value="HØ">Højre side (HØ)</option>
                 <option value="VN">Venstre side (VN)</option>
               </select>
             </div>
 
             <div className="field">
-              <label>Hold</label>
-              <select value={form.club_id} onChange={e => setF('club_id', e.target.value)}>
+              <label htmlFor="player-club">Hold</label>
+              <select id="player-club" value={form.club_id} onChange={e => setF('club_id', e.target.value)}>
                 <option value="">Vælg hold</option>
                 {clubs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
 
             <div className="field">
-              <label>Farve på spillerkort</label>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+              <label id="player-color-label">Farve på spillerkort</label>
+              <div role="group" aria-labelledby="player-color-label" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
                 {COLORS.map(col => (
-                  <div key={col} onClick={() => setF('color', col)}
-                    style={{ width: 32, height: 32, borderRadius: '50%', background: col, cursor: 'pointer', border: form.color === col ? '3px solid #fff' : '3px solid transparent', boxShadow: form.color === col ? '0 0 0 2px #2d9e62' : 'none', transition: 'all .15s' }} />
+                  <button type="button" key={col} onClick={() => setF('color', col)}
+                    aria-label={`Vælg farve ${col}`} aria-pressed={form.color === col}
+                    style={{ width: 32, height: 32, borderRadius: '50%', background: col, cursor: 'pointer', border: form.color === col ? '3px solid #fff' : '3px solid transparent', boxShadow: form.color === col ? '0 0 0 2px #2d9e62' : 'none', transition: 'all .15s', padding: 0 }} />
                 ))}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>

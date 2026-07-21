@@ -101,7 +101,7 @@ export function PlayerCardMini({ player, stats, onClick }) {
   const { overall, off, def } = computeScores(s)
 
   return (
-    <div className="pcard" onClick={onClick}>
+    <button type="button" className="pcard" onClick={onClick} aria-label={`${player.name} — se spillerkort`}>
       <div className="pcard-top">
         <div>
           <div className="pcard-rating">{overall}</div>
@@ -139,7 +139,7 @@ export function PlayerCardMini({ player, stats, onClick }) {
           </div>
         ))}
       </div>
-    </div>
+    </button>
   )
 }
 
@@ -192,15 +192,17 @@ export function PlayerCardDetail({ player, stats, awards, onBack }) {
             { type: 'off',     val: off,     lbl: 'OFFENSIV',  hint: 'Overheads · Volleys' },
             { type: 'def',     val: def,     lbl: 'DEFENSIV',  hint: 'Grundslag · Omstilling' },
           ].map(({ type, val, lbl, hint }) => (
-            <div
+            <button
+              type="button"
               key={type}
               className={`score-block${openDrill === type ? ' open' : ''}`}
               onClick={() => toggleDrill(type)}
+              aria-pressed={openDrill === type}
             >
               <div className="score-block-val">{val}</div>
               <div className="score-block-lbl">{lbl}</div>
               <div className="score-block-hint">{hint}</div>
-            </div>
+            </button>
           ))}
         </div>
 

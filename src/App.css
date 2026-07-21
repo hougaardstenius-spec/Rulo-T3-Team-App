@@ -11,6 +11,16 @@
   --card-mid: #1a2e4a;
   --radius: 14px;
   --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* Semantic tokens used across pages — keep in sync, this is the single source of truth */
+  --color-background-primary: #ffffff;
+  --color-background-secondary: #f0f2f5;
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #555c63;
+  --color-text-tertiary: #767c82;
+  --color-border-secondary: #d5d9dd;
+  --color-border-tertiary: #e2e5e8;
+  --focus-ring: #185fa5;
 }
 
 body {
@@ -55,7 +65,9 @@ body {
   border-bottom: 2px solid transparent;
   transition: color 0.2s, border-color 0.2s;
 }
-.nav-btn .nav-icon { font-size: 18px; line-height: 1; }
+.nav-btn { min-height: 44px; }
+.nav-btn .nav-icon { display: flex; }
+.nav-btn .nav-icon svg { width: 18px; height: 18px; }
 .nav-btn.active { color: #fff; border-bottom-color: var(--green-mid); }
 .nav-btn:hover { color: #c8dff0; }
 
@@ -85,6 +97,8 @@ body {
   cursor: pointer;
   border: 1px solid rgba(255,255,255,0.08);
   transition: transform 0.2s;
+  display: block; width: 100%; text-align: left;
+  font: inherit; color: inherit; padding: 0; -webkit-appearance: none;
 }
 .pcard:hover { transform: translateY(-3px); }
 
@@ -127,7 +141,7 @@ body {
   border: none; color: #8fafc4;
   padding: 8px 14px; border-radius: 8px;
   cursor: pointer; font-size: 13px;
-  margin-bottom: 14px;
+  margin-bottom: 14px; min-height: 44px;
   display: flex; align-items: center; gap: 6px;
 }
 .back-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
@@ -162,6 +176,7 @@ body {
   background: rgba(255,255,255,0.05); border-radius: 10px; padding: 10px;
   text-align: center; border: 1px solid rgba(255,255,255,0.07);
   cursor: pointer; transition: background 0.15s, border-color 0.15s; user-select: none;
+  width: 100%; font: inherit; color: inherit; min-height: 44px; -webkit-appearance: none;
 }
 .score-block:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
 .score-block.open { background: rgba(255,255,255,0.1); border-color: #2d9e62; }
@@ -272,7 +287,7 @@ body {
 .rank-badge { font-size: 9px; padding: 2px 7px; border-radius: 10px; background: var(--gold-light); color: #7a5c00; font-weight: 600; margin-top: 3px; display: inline-block; }
 .rank-score { text-align: right; }
 .rank-pts { font-size: 18px; font-weight: 700; color: var(--green); }
-.rank-pts-lbl { font-size: 10px; color: #999; font-weight: 400; }
+.rank-pts-lbl { font-size: 10px; color: var(--color-text-tertiary); font-weight: 400; }
 .rank-trend { font-size: 11px; margin-top: 2px; }
 .trend-up { color: #2d9e62; }
 .trend-dn { color: #e24b4a; }
@@ -299,7 +314,8 @@ body {
 .match-cal-btn {
   background: none; border: 0.5px solid #ccc; border-radius: 8px;
   padding: 7px 10px; cursor: pointer; font-size: 11px; color: #666;
-  display: flex; align-items: center; gap: 4px; white-space: nowrap; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  white-space: nowrap; flex-shrink: 0; min-width: 44px; min-height: 44px;
 }
 .match-cal-btn:hover { background: var(--green-light); border-color: var(--green-mid); color: var(--green); }
 
@@ -321,15 +337,20 @@ body {
   background: #fff; border-radius: 20px 20px 0 0; padding: 24px;
   width: 100%; max-width: 480px; max-height: 90dvh; overflow-y: auto;
 }
-.modal-title { font-size: 18px; font-weight: 600; margin-bottom: 18px; }
-.modal-close { float: right; background: none; border: none; font-size: 20px; cursor: pointer; color: #666; }
+.modal-title { font-size: 18px; font-weight: 600; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.modal-close {
+  background: none; border: none; font-size: 20px; cursor: pointer; color: #666;
+  width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; border-radius: 8px;
+}
+.modal-close:hover { background: rgba(0,0,0,0.05); color: #333; }
 
 /* ── Form elements ── */
 .field { margin-bottom: 14px; }
 .field label { font-size: 12px; font-weight: 600; color: #444; display: block; margin-bottom: 5px; }
 .field input, .field select {
   width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px;
-  font-size: 14px; font-family: var(--font); outline: none;
+  font-size: 16px; font-family: var(--font); outline: none;
 }
 .field input:focus, .field select:focus { border-color: var(--green-mid); }
 
@@ -355,3 +376,35 @@ body {
   font-size: 13px; white-space: nowrap; animation: toastIn 0.25s ease;
 }
 @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ── Accessibility: focus visibility ── */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.pcard:focus-visible,
+.score-block:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
+/* ── Utility: keyboard-accessible clickable card (div acting as a button) ── */
+.interactive-card { cursor: pointer; }
+.interactive-card:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* ── Accessibility: respect reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
