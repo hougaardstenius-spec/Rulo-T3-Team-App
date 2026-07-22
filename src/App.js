@@ -104,7 +104,7 @@ export default function App() {
         }}>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', letterSpacing: '.5px' }}>
-              Kollektivet x RULO.dk
+              Padelværket
             </div>
             <div style={{ fontSize: 10, color: '#8fafc4', marginTop: 1 }}>Padelforening</div>
           </div>
