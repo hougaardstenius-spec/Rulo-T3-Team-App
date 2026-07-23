@@ -8,7 +8,6 @@ export default function Stats() {
   const [matchPlayers, setMatchPlayers] = useState([])
   const [clubPlayers, setClubPlayers] = useState([])
   const [loading, setLoading] = useState(true)
-  const [matchTypeFilter, setMatchTypeFilter] = useState('all')
   const [sortBy, setSortBy] = useState('matches_played')
   const [sortDir, setSortDir] = useState('desc')
 
@@ -32,13 +31,9 @@ export default function Stats() {
     ? clubPlayers.filter(cp => cp.club_id === selectedClub).map(cp => cp.player_id)
     : players.map(p => p.id)
 
-  // Filtrer match_players kun på kamptype — IKKE på club_id
-  // Statistik vises for spilleren uanset hvilken kamp det var
-  const filteredByType = matchPlayers.filter(mp => {
-    if (!mp.matches) return false
-    if (matchTypeFilter !== 'all' && mp.matches.match_type !== matchTypeFilter) return false
-    return true
-  })
+  // Statistik tæller kun officielle holdkampe — ikke træningskampe.
+  // Filtreres ikke på club_id: spilleren tæller uanset hvilket hold kampen var mod.
+  const filteredByType = matchPlayers.filter(mp => mp.matches?.match_type === 'official')
 
   // Beregn statistik per spiller
   const stats = visiblePlayerIds.map(pid => {
@@ -145,20 +140,10 @@ export default function Stats() {
   return (
     <div>
       <div style={{ marginBottom: 14 }}>
-        <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 10 }}>
+        <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 4 }}>
           Statistik — {currentClub ? currentClub.name : 'Alle hold'}
         </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          {[['all','Alle kampe'],['official','Officielle'],['training','Træning']].map(([val, label]) => (
-            <button key={val} onClick={() => setMatchTypeFilter(val)}
-              style={{
-                padding: '5px 12px', borderRadius: 20, border: 'none', cursor: 'pointer',
-                fontSize: 12, fontWeight: 500,
-                background: matchTypeFilter === val ? '#1a7a4a' : 'var(--color-background-secondary)',
-                color: matchTypeFilter === val ? '#fff' : 'var(--color-text-secondary)',
-              }}>{label}</button>
-          ))}
-        </div>
+        <div style={{ fontSize: 12, color: 'var(--color-text-tertiary)' }}>Kun officielle holdkampe tæller med</div>
       </div>
 
       {sorted.length === 0 ? (
@@ -214,7 +199,7 @@ export default function Stats() {
         </div>
       )}
       <div style={{ fontSize: 10, color: 'var(--color-text-tertiary)', marginTop: 10, textAlign: 'center' }}>
-        Tryk på kolonneoverskrift for at sortere · 2-0 = kampe vundet til nul
+        Tryk på kolonneoverskrift for at sortere · 2-0 = kampe vundet til nul · træningskampe tæller ikke med
       </div>
     </div>
   )
